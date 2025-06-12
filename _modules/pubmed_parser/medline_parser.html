@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>pubmed_parser.medline_parser &mdash; Pubmed Parser 0.1.dev356+geaa3280 documentation</title>
+  <title>pubmed_parser.medline_parser &mdash; Pubmed Parser 0.1.dev357+g1559018 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=2b499654"></script>
+      <script src="../../_static/documentation_options.js?v=8f1181a9"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -818,17 +818,29 @@
 <span class="sd">    ------</span>
 <span class="sd">    An iterator of dictionary containing information about articles in NLM format.</span>
 <span class="sd">        see `parse_article_info`). Articles that have been deleted will be</span>
-<span class="sd">        added with no information other than the field `delete` being `True`</span>
+<span class="sd">        added with no information other than the fields `delete` being `True`,</span>
+<span class="sd">        and `pmid`.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
 <span class="sd">    &gt;&gt;&gt; article_iterator = pubmed_parser.parse_medline_xml(&#39;data/pubmed20n0014.xml.gz&#39;)</span>
 <span class="sd">    &gt;&gt;&gt; for article in article_iterator:</span>
-<span class="sd">    ...     print(article[&#39;title&#39;])</span>
+<span class="sd">    ...     if article.get(&#39;delete&#39;):</span>
+<span class="sd">    ...         print(f&quot;Deleted PMID: {article[&#39;pmid&#39;]}&quot;)</span>
+<span class="sd">    ...     else:</span>
+<span class="sd">    ...         print(article[&#39;title&#39;])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">event</span><span class="p">,</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">etree</span><span class="o">.</span><span class="n">iterparse</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">events</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;end&quot;</span><span class="p">,)):</span>
-            <span class="k">if</span> <span class="n">element</span><span class="o">.</span><span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;PubmedArticle&quot;</span><span class="p">:</span>
+            <span class="c1"># Handle &lt;DeleteCitation&gt; elements, indicating articles removed from PubMed.</span>
+            <span class="k">if</span> <span class="n">element</span><span class="o">.</span><span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;DeleteCitation&quot;</span><span class="p">:</span>
+                <span class="c1"># These elements are expected to contain one or more PMID tags.</span>
+                <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">element</span><span class="o">.</span><span class="n">iterchildren</span><span class="p">():</span>
+                    <span class="k">assert</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;PMID&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;PMID tag expected. Got: </span><span class="si">{</span><span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="k">yield</span> <span class="p">{</span><span class="s2">&quot;pmid&quot;</span><span class="p">:</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="s2">&quot;delete&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+                <span class="n">element</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+            <span class="k">elif</span> <span class="n">element</span><span class="o">.</span><span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;PubmedArticle&quot;</span><span class="p">:</span>
                 <span class="n">res</span> <span class="o">=</span> <span class="n">parse_article_info</span><span class="p">(</span>
                     <span class="n">element</span><span class="p">,</span>
                     <span class="n">year_info_only</span><span class="p">,</span>
